@@ -17,8 +17,12 @@ from dataclasses import dataclass
 from .clock import Clock, RealClock
 from .core.frame_buffer import DmxFrameBuffer
 from .core.metronome import Metronome
+from .core.show_engine import ShowEngine
 from .core.show_state import ShowState
+from .engines.reactive import ReactiveLayerEngine
+from .fixtures.rig import Rig, load_rig
 from .inputs.demo import DemoDataSource
+from .merge.merge import ManualParams
 from .output.base import OutputBackend
 from .output.null_log import NullLogBackend
 from .output.writer import DmxWriter
@@ -63,9 +67,20 @@ class App:
         self.metronome = Metronome(self.input_queue, self.show_state, self.clock, self.stop_event)
         self.source = DemoDataSource(self.input_queue, self.clock, self.stop_event)
 
+        # --- show pipeline (Phase 3): snapshot -> engines -> merge -> frame buffer ---
+        self.rig: Rig = load_rig()
+        self.manual = ManualParams()
+        self.engines = [ReactiveLayerEngine()]
+        self.show_engine = ShowEngine(
+            self.show_state, self.rig, self.frame_buffer, self.engines,
+            self.manual, self.clock, self.stop_event,
+        )
+
         # All non-daemon threads to join on shutdown. Order: producers first so the
         # metronome drains a quiescent queue last; the writer is independent.
-        self._threads: list[threading.Thread] = [self.source, self.metronome, self.writer]
+        self._threads: list[threading.Thread] = [
+            self.source, self.metronome, self.show_engine, self.writer,
+        ]
 
     def start(self) -> None:
         log.info(
@@ -90,7 +105,7 @@ class App:
 
     def serve(self) -> None:
         """Start threads and block until a stop signal, Ctrl-C, or duration end."""
-        self._install_signal_handlers()
+        self.install_signal_handlers()
         self.start()
         try:
             if self.config.duration is not None:
@@ -104,7 +119,7 @@ class App:
         finally:
             self.shutdown()
 
-    def _install_signal_handlers(self) -> None:
+    def install_signal_handlers(self) -> None:
         def handler(signum, _frame):
             log.info("Received signal %s", signum)
             self.stop_event.set()

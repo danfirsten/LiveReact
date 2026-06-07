@@ -14,20 +14,18 @@ live in [`PLAN.md`](PLAN.md); deferred hardware/usage decisions live in
 
 ## Status
 
-**Phases 0, 1 & 2 complete.** The spine runs hardware-free (drift-corrected DMX
-writer on an injected clock, clean shutdown); a synthetic musical clock produces a
-smooth interpolated beat phase, inferred bars, energy, and transitions, published as
-tear-free immutable ShowState snapshots; and the universe is visible on screen
-(fixture profiles + rig loader + merge/safety layer + PySide6 virtual rig
-visualizer with a DMX inspector). **Phase 3 (Reactive Layer)** is next — it joins
-the two halves: read a ShowState snapshot, write contributions into the merge.
-Phases 0–6 need **no hardware**. See [`PLAN.md`](PLAN.md).
+**Phases 0–3 complete — the show is alive.** End to end with no hardware: a
+synthetic musical clock → tear-free ShowState snapshots → the Reactive Layer
+(beat-locked wash pulses, BPM-locked mirrored moving heads, frequency-driven color)
+→ merge/safety → the DMX writer, all visible on the PySide6 virtual rig.
+**Phase 4 (scene catalog + Phrase Engine)** is next. Phases 0–6 need **no
+hardware**. See [`PLAN.md`](PLAN.md).
 
-See the visualizer now (animated hand-set scene through the real merge pipeline):
+Watch it live (the full pipeline driving the rig view):
 
 ```bash
-.venv\Scripts\python -m livereact.ui.visualizer    # Windows
-.venv/bin/python -m livereact.ui.visualizer        # macOS / Linux
+.venv\Scripts\python -m livereact --demo --visualize     # Windows
+.venv/bin/python -m livereact --demo --visualize         # macOS / Linux
 ```
 
 ## Quick start

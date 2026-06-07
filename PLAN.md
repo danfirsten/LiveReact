@@ -59,15 +59,22 @@ Synthetic "music" producing smooth beat phase; no hardware.
       unless explicitly enabled. ✅ *Verified: 40 tests pass + offscreen render confirmed
       (lasers on only in drop window, color/brightness/beams correct).*
 
-## Phase 3 — Reactive Layer `[ ]`
+## Phase 3 — Reactive Layer `[x]`
 First "it's alive": beat-locked, frequency-colored output on the virtual rig.
 
-- [ ] `ReactiveLayerEngine.tick` — per-beat wash dimmer pulse (~200 ms decay),
-      BPM-locked MH pan/tilt, **two-axis color** (energy→bright/sat, band→hue),
-      energy-scaled capped strobe
-- [ ] Show engine wires snapshot → reactive → merge → publish, per-engine try/except
-- [ ] **Acceptance:** washes pulse each beat, MHs cycle smoothly, color reflects
+- [x] Two-axis color model (`color.py` + `engines/color.py`): energy→brightness/sat,
+      band-dominance→hue (bass red / mid magenta / high cyan; balanced→white)
+- [x] `Engine` interface (`engines/base.py`): read snapshot, return a Contribution
+- [x] `ReactiveLayerEngine.tick` — per-beat wash pulse (exp ~200 ms decay), BPM-locked
+      mirrored MH pan/tilt, two-axis color, energy-gated conservatively-capped strobe
+- [x] `ShowEngine` (60 Hz): snapshot → engines → merge → finalize → publish, with
+      **per-engine try/except** (faulty engine keeps last contribution) and **freeze**
+      = don't publish (writer holds last frame)
+- [x] Wired into `App`; `--visualize` flag opens the live rig view
+- [x] **Acceptance:** washes pulse each beat, MHs cycle smoothly, color reflects
       synthetic EQ; injected-clock test asserts one pulse per beat + color follows band.
+      ✅ *Verified: 15 new tests; live demo shows 24 active channels; offscreen render
+      confirms cyan (highs up), MH movement, lasers off.*
 
 ## Phase 4 — Scene catalog + Phrase Engine `[ ]`
 A rotating, crossfading show.

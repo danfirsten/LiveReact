@@ -31,6 +31,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     mode.add_argument("--hardware", action="store_true", help="Use real devices (Phase 7+; falls back to demo for now).")
     p.add_argument("--rate", type=float, default=40.0, dest="rate", help="DMX refresh rate in Hz (default: 40).")
     p.add_argument("--duration", type=float, default=None, help="Run for N seconds then exit (default: until Ctrl-C).")
+    p.add_argument("--visualize", action="store_true", help="Open the virtual rig visualizer (PySide6).")
     p.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR (default: INFO).")
     return p.parse_args(argv)
 
@@ -45,7 +46,21 @@ def main(argv: list[str] | None = None) -> int:
         log.warning("Hardware mode not implemented yet (Phase 7); running in demo mode.")
 
     config = AppConfig(demo=demo, dmx_rate_hz=args.rate, duration=args.duration)
-    App(config).serve()
+    app = App(config)
+
+    if args.visualize:
+        # Qt must own the main thread: run the pipeline in the background and the
+        # visualizer here; closing the window shuts everything down.
+        from .ui.visualizer import run as run_visualizer
+
+        app.install_signal_handlers()
+        app.start()
+        try:
+            run_visualizer(app.frame_buffer, app.rig)
+        finally:
+            app.shutdown()
+    else:
+        app.serve()
     return 0
 
 
