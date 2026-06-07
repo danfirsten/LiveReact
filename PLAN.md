@@ -1,0 +1,128 @@
+# LiveReact — Build Plan & Status
+
+The working checklist for the rebuild, derived from
+[`docs/12_REBUILD_ROADMAP.md`](docs/12_REBUILD_ROADMAP.md). **Demo-first**: Phases
+0–6 need no hardware; Phase 7 is the only hardware-gated phase. No calendar dates —
+plan by phase completion. Each phase lists its **acceptance check** (the bar for
+"done, move on").
+
+Legend: `[x]` done · `[~]` in progress · `[ ]` not started
+
+---
+
+## Phase 0 — Foundation `[x]`
+The spine: threads alive, frames flowing, writer never stops, all on an injected clock.
+
+- [x] Git repo + `pyproject.toml` (Python 3.12 target; 3.13 dev venv) + `.gitignore`
+- [x] `Clock` interface, `RealClock` (hybrid sleep + spin tail), `FakeClock`
+- [x] `LoopTimer` — drift-corrected fixed-rate scheduler with stall resync
+- [x] `DmxFrameBuffer` — double-buffered publish/consume (keep-last-frame)
+- [x] `OutputBackend` interface + `NullLogBackend`
+- [x] `DmxWriter` thread — reads published frame, writes at 40 Hz, survives all faults
+- [x] `App` supervisor — `threading.Event` stop, SIGINT/SIGTERM, clean joins
+- [x] CLI entry point (`python -m livereact --demo`) + `run.bat` / `run.command`
+- [x] pytest: clock/loop-timer, frame buffer, writer (deterministic via FakeClock)
+- [x] **Acceptance:** `run --demo` starts threads on a RealClock, null writer logs
+      steady ~40 Hz frames, Ctrl-C shuts down cleanly; FakeClock test drives the
+      writer deterministically. ✅ *Verified: 40 fps steady, clean shutdown, 15 tests pass.*
+
+## Phase 1 — Demo musical clock + state bus `[ ]`
+Synthetic "music" producing smooth beat phase; no hardware.
+
+- [ ] `ShowState` with immutable one-lock `snapshot()` (frozen dataclass) + per-field
+      provenance/confidence (measured / inferred / interpolated). (docs/04 §4.3)
+- [ ] `queue.Queue` message types (beat, bpm, midi-cc, transition)
+- [ ] `Metronome` — sole writer of clock fields; drains queue, interpolates beat
+      phase, resyncs to beats, infers bar count, free-runs on staleness
+- [ ] `DemoDataSource` (`InputSource`) — fixed BPM, advancing beat/bar, slow energy
+      curve, periodic synthetic transitions/loops
+- [ ] **Acceptance:** demo logs show smooth ~100 Hz interpolated beat phase, an
+      advancing bar counter, periodic transitions; snapshots tear-free under stress.
+
+## Phase 2 — Fixtures, rig, merge, virtual visualizer `[ ]`
+*See* the universe on screen.
+
+- [ ] `Fixture` base + profiles (MH 15ch, laser 12ch, par 4ch, wash bar 6ch) — docs/04 §3
+- [ ] `Rig` loader (JSON rig file); expose fixtures by role/side
+- [ ] `merge` layer: max (color/dimmer), last-write (movement), strobe cap, manual
+      caps/biases, blackout/freeze, **safety clamps** (laser off unless enabled, strobe cap)
+- [ ] PySide6 virtual rig visualizer (`QGraphicsView`) + raw DMX inspector
+- [ ] **Acceptance:** hand-set scene buffer shows correct universe in viz/inspector;
+      master-brightness scales dimmers; blackout zeros output; laser can't be nonzero
+      unless explicitly enabled.
+
+## Phase 3 — Reactive Layer `[ ]`
+First "it's alive": beat-locked, frequency-colored output on the virtual rig.
+
+- [ ] `ReactiveLayerEngine.tick` — per-beat wash dimmer pulse (~200 ms decay),
+      BPM-locked MH pan/tilt, **two-axis color** (energy→bright/sat, band→hue),
+      energy-scaled capped strobe
+- [ ] Show engine wires snapshot → reactive → merge → publish, per-engine try/except
+- [ ] **Acceptance:** washes pulse each beat, MHs cycle smoothly, color reflects
+      synthetic EQ; injected-clock test asserts one pulse per beat + color follows band.
+
+## Phase 4 — Scene catalog + Phrase Engine `[ ]`
+A rotating, crossfading show.
+
+- [ ] `Scene` base + ~8 of 12 starter scenes (docs/08 §3) across breakdown/build/drop/hold
+- [ ] `SceneCatalog` (round-robin within energy bucket); **lasers only in drop scenes**
+- [ ] `PhraseEngine.tick` — inferred 8/16-bar boundaries, ~2-bar crossfade, ≥4-bar
+      hold, suspend on transition/loop
+- [ ] UI: scene-override dropdown / force-scene
+- [ ] **Acceptance:** scenes rotate every 16 inferred bars with smooth crossfades;
+      each scene distinct; lasers only in drops; transition/loop suspends rotation;
+      boundary fires once (unit test).
+
+## Phase 5 — Operator console + manual control + safety `[ ]`
+The full UI and the "automation is default, manual is bias" model.
+
+- [ ] PySide6 console: BPM/beat/bar, on-air deck, energy meter, frequency strip,
+      active scene, transition + input-staleness indicators
+- [ ] ManualParams: master brightness, strobe cap, laser enable, warm/cool bias,
+      blackout, freeze, skip-scene + keyboard shortcuts (B/F/Space/→/T tap-tempo)
+- [ ] Confirm safety clamps in merge on every path; instant blackout
+- [ ] Optional `config.json` persistence (brightness, rig, scene tuning)
+- [ ] **Acceptance:** full console runs the demo 60 min unattended, no leak/artifact;
+      manual controls cap/bias without stopping automation; blackout/freeze/skip work.
+
+## Phase 6 — Transition Engine `[ ]`
+Clean DJ-mix handling, built against synthetic transitions first.
+
+- [ ] `TransitionEngine.tick` — crossfader/fader/on-air detection → `in_transition`,
+      hold + ~20% brightness, crossfade on next downbeat, mandatory ≥4-bar hold
+- [ ] Demo source drives varied synthetic transitions
+- [ ] **Acceptance:** synthetic crossfader move flips indicator within ~200 ms; no
+      rotation during transition; settles cleanly; ≥4-bar hold; deterministic FakeClock tests.
+
+## Phase 7 — Hardware integration `[ ]` *(requires rig — only hardware-gated phase)*
+Swap demo adapters for real ones; no engine/scene changes.
+
+- [ ] Install/verify on **Python 3.12** (for `python-rtmidi` wheels)
+- [ ] `EnttecSerialBackend` — FTDI VID/PID detect, macOS `cu.*`, 518-byte frames @ 40 Hz, self-healing
+- [ ] Manual fixture-test panel (drive individual channels; verify all 8 fixtures)
+- [ ] `ProDjLinkListener` (explicit interface override, netifaces swap) + `MidiListener`
+- [ ] MIDI-learn tool (remap XDJ empirically; persist map)
+- [ ] Network setup: static `169.254.x.y/16`, firewall rule, "no DJ-Link seen" diagnostic
+- [ ] **Acceptance:** each fixture responds to manual writes; lights pulse on real XDJ
+      beats; crossfader updates UI live; full scene rotation works on the macOS show machine.
+
+## Phase 8 — Tuning, endurance, packaging `[ ]`
+Make it good and shippable.
+
+- [ ] Tune against real sets (beat-lock, color, crossfade, strobe, scene distinctiveness)
+- [ ] 90-min endurance soak; exercise every failure mode (PDL drop, MIDI unplug, serial fail, loop, hard cut)
+- [ ] Package: PyInstaller `--onedir` → signed + notarized macOS `.app`; test on clean Mac
+- [ ] **Acceptance:** 90-min unattended set, graceful degradation on every failure,
+      writer never stops, signed `.app` runs on a clean Mac.
+
+---
+
+## Definition of done (whole rebuild)
+All of [`docs/02 §6`](docs/02_GOAL_AND_REQUIREMENTS.md): PDL+MIDI input, 74-channel
+DMX output (Enttec or Art-Net), ≥8 rotating scenes, transition handling, 90-min
+unattended endurance, full demo mode, macOS (portable codebase), graceful
+degradation with a writer that never stops, verified laser/strobe safety.
+
+> **If hardware never materializes**, Phases 0–6 still yield a complete,
+> demonstrable, visualizer-driven application — the whole point of "demo mode is
+> the substrate."
