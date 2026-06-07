@@ -26,8 +26,10 @@ The spine: threads alive, frames flowing, writer never stops, all on an injected
       steady ~40 Hz frames, Ctrl-C shuts down cleanly; FakeClock test drives the
       writer deterministically. ✅ *Verified: 40 fps steady, clean shutdown, 15 tests pass.*
 
-## Phase 1 — Demo musical clock + state bus `[ ]`
+## Phase 1 — Demo musical clock + state bus `[ ]` ← **next / deferred**
 Synthetic "music" producing smooth beat phase; no hardware.
+> Built Phase 2 first (its acceptance is defined against a hand-set scene buffer).
+> Phase 1 is still required before **Phase 3** wires real timing/EQ into the engines.
 
 - [ ] `ShowState` with immutable one-lock `snapshot()` (frozen dataclass) + per-field
       provenance/confidence (measured / inferred / interpolated). (docs/04 §4.3)
@@ -39,17 +41,20 @@ Synthetic "music" producing smooth beat phase; no hardware.
 - [ ] **Acceptance:** demo logs show smooth ~100 Hz interpolated beat phase, an
       advancing bar counter, periodic transitions; snapshots tear-free under stress.
 
-## Phase 2 — Fixtures, rig, merge, virtual visualizer `[ ]`
+## Phase 2 — Fixtures, rig, merge, virtual visualizer `[x]`
 *See* the universe on screen.
 
-- [ ] `Fixture` base + profiles (MH 15ch, laser 12ch, par 4ch, wash bar 6ch) — docs/04 §3
-- [ ] `Rig` loader (JSON rig file); expose fixtures by role/side
-- [ ] `merge` layer: max (color/dimmer), last-write (movement), strobe cap, manual
-      caps/biases, blackout/freeze, **safety clamps** (laser off unless enabled, strobe cap)
-- [ ] PySide6 virtual rig visualizer (`QGraphicsView`) + raw DMX inspector
-- [ ] **Acceptance:** hand-set scene buffer shows correct universe in viz/inspector;
+- [x] `Fixture` base + profiles (MH 15ch, laser 12ch, par 4ch, wash bar 6ch) — docs/04 §3
+- [x] `Rig` loader (JSON rig file, packaged `default_rig.json`); fixtures by role/side; overlap/overflow validation
+- [x] `merge` layer: max (color/dimmer), last-write (movement), strobe cap, manual
+      caps/biases, blackout, **safety clamps** (laser off unless enabled, strobe cap).
+      *(freeze deferred to the show engine in Phase 3; warm/cool bias to Phase 5)*
+- [x] PySide6 virtual rig visualizer (`QGraphicsView`, beam lines for MHs) + raw DMX inspector
+- [x] Standalone demo: `python -m livereact.ui.visualizer` (animated hand-set scene)
+- [x] **Acceptance:** hand-set scene buffer shows correct universe in viz/inspector;
       master-brightness scales dimmers; blackout zeros output; laser can't be nonzero
-      unless explicitly enabled.
+      unless explicitly enabled. ✅ *Verified: 40 tests pass + offscreen render confirmed
+      (lasers on only in drop window, color/brightness/beams correct).*
 
 ## Phase 3 — Reactive Layer `[ ]`
 First "it's alive": beat-locked, frequency-colored output on the virtual rig.

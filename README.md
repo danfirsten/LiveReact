@@ -14,9 +14,18 @@ live in [`PLAN.md`](PLAN.md); deferred hardware/usage decisions live in
 
 ## Status
 
-**Phase 0 (Foundation) — in progress.** The spine runs hardware-free: a
-drift-corrected DMX writer thread emits frames at a steady rate to a null backend,
-on an injected clock, with clean Ctrl-C shutdown. Phases 0–6 need **no hardware**.
+**Phases 0 & 2 complete.** The spine runs hardware-free (drift-corrected DMX
+writer on an injected clock, clean shutdown), and the universe is visible on screen:
+fixture profiles + rig loader + merge/safety layer + a PySide6 virtual rig
+visualizer with a DMX inspector. Phase 1 (synthetic musical clock) is next; Phases
+0–6 need **no hardware**. See [`PLAN.md`](PLAN.md).
+
+See the visualizer now (animated hand-set scene through the real merge pipeline):
+
+```bash
+.venv\Scripts\python -m livereact.ui.visualizer    # Windows
+.venv/bin/python -m livereact.ui.visualizer        # macOS / Linux
+```
 
 ## Quick start
 
