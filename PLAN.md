@@ -107,14 +107,15 @@ ManualParams; tap-tempo injects beats; config.json round-trips. 60-min soak → 
 - [x] **Acceptance:** full console runs the demo 60 min unattended, no leak/artifact;
       manual controls cap/bias without stopping automation; blackout/freeze/skip work.
 
-## Phase 6 — Transition Engine `[ ]`
+## Phase 6 — Transition Engine `[x]`
 Clean DJ-mix handling, built against synthetic transitions first.
 
-- [ ] `TransitionEngine.tick` — crossfader/fader/on-air detection → `in_transition`,
+- [x] `TransitionEngine.tick` — crossfader/fader/on-air detection → `in_transition`,
       hold + ~20% brightness, crossfade on next downbeat, mandatory ≥4-bar hold
-- [ ] Demo source drives varied synthetic transitions
-- [ ] **Acceptance:** synthetic crossfader move flips indicator within ~200 ms; no
+- [x] Demo source drives varied synthetic transitions
+- [x] **Acceptance:** synthetic crossfader move flips indicator within ~200 ms; no
       rotation during transition; settles cleanly; ≥4-bar hold; deterministic FakeClock tests.
+      ✅ *Verified: 99 tests; live demo detects transition=Y from the crossfader and settles into a new scene right after.*
 
 ## Phase 7 — Hardware integration `[ ]` *(requires rig — only hardware-gated phase)*
 Swap demo adapters for real ones; no engine/scene changes.

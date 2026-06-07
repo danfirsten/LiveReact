@@ -14,14 +14,15 @@ live in [`PLAN.md`](PLAN.md); deferred hardware/usage decisions live in
 
 ## Status
 
-**Phases 0–5 complete — it's operable.** End to end with no hardware: a synthetic
-musical clock → tear-free ShowState snapshots → the Reactive Layer + the Phrase
-Engine (8-scene catalog rotating on 16-bar boundaries; lasers only on drops) →
-merge/safety → the DMX writer, all wrapped in an **operator console** with live
-readouts (BPM/beat/bar/energy/bands/scene/health) and manual bias controls
-(brightness, strobe cap, warm/cool, blackout, freeze, skip, tap-tempo) — automation
-stays the default. **Phase 6 (Transition Engine)** is next. Phases 0–6 need **no
-hardware**. See [`PLAN.md`](PLAN.md).
+**Phases 0–6 complete — the whole no-hardware show is built.** End to end with no
+hardware: a synthetic musical clock → tear-free ShowState snapshots → the Reactive
+Layer + the Phrase Engine (8-scene catalog rotating on 16-bar boundaries; lasers
+only on drops) + the Transition Engine (detects DJ mixes from crossfader motion,
+holds + lifts during the mix, settles into a new look after) → merge/safety → the
+DMX writer, all wrapped in an **operator console** with live readouts and manual
+bias controls — automation stays the default. **Phase 7 (real hardware)** is the
+only remaining step that needs the physical rig; Phase 8 is tuning + packaging. See
+[`PLAN.md`](PLAN.md).
 
 Watch it live (the full pipeline driving the rig view):
 

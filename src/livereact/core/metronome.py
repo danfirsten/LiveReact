@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+from collections import deque
 
 from ..clock import Clock, LoopTimer
 from .messages import BeatMessage, MidiControlMessage, StatusMessage, TransitionMessage
@@ -29,6 +30,13 @@ log = logging.getLogger(__name__)
 PDL_STALE_AFTER = 1.0   # seconds without a PDL message -> not fresh
 MIDI_STALE_AFTER = 1.0  # seconds without a MIDI message -> not fresh
 ENERGY_SMOOTHING = 0.05  # EMA factor per tick (~0.2 s time constant at 100 Hz)
+
+# Transition detection (Phase 6): a crossfader that moves more than CROSS_MOVE
+# within CROSS_WINDOW seconds — or a master-deck handoff — marks a transition,
+# which then holds for TRANSITION_COOLDOWN after motion stops.
+CROSS_WINDOW = 0.25
+CROSS_MOVE = 0.08
+TRANSITION_COOLDOWN = 0.5
 
 
 class Metronome(threading.Thread):
@@ -61,7 +69,11 @@ class Metronome(threading.Thread):
         self._loop_active = False
         self._on_air: tuple[int, ...] = ()
         self._master_deck: int | None = None
-        self._in_transition = False
+
+        # transition detection
+        self._cross_history: deque[tuple[float, float]] = deque()
+        self._transition_until = 0.0
+        self._prev_master: int | None = None
 
         # MIDI intent
         self._midi = {
@@ -116,7 +128,12 @@ class Metronome(threading.Thread):
         elif isinstance(msg, MidiControlMessage):
             self._on_midi(msg)
         elif isinstance(msg, TransitionMessage):
-            self._in_transition = msg.active
+            # An explicit transition signal (demo/manual). Detection is the main
+            # path; this just nudges the same timer so both sources agree.
+            if msg.active:
+                self._transition_until = max(self._transition_until, msg.timestamp + TRANSITION_COOLDOWN)
+            else:
+                self._transition_until = msg.timestamp
         else:  # pragma: no cover - defensive
             log.debug("Metronome ignoring unknown message: %r", msg)
 
@@ -138,6 +155,10 @@ class Metronome(threading.Thread):
     def _on_status(self, msg: StatusMessage) -> None:
         self._last_pdl_time = msg.timestamp
         self._on_air = msg.on_air
+        # A master-deck handoff is a transition.
+        if self._prev_master is not None and msg.master_deck != self._prev_master:
+            self._transition_until = max(self._transition_until, msg.timestamp + TRANSITION_COOLDOWN)
+        self._prev_master = msg.master_deck
         self._master_deck = msg.master_deck
         self._playing = msg.playing
         self._loop_active = msg.loop_active
@@ -145,7 +166,21 @@ class Metronome(threading.Thread):
     def _on_midi(self, msg: MidiControlMessage) -> None:
         self._last_midi_time = msg.timestamp
         if msg.control in self._midi:
-            self._midi[msg.control] = max(0.0, min(1.0, msg.value))
+            value = max(0.0, min(1.0, msg.value))
+            self._midi[msg.control] = value
+            if msg.control == "crossfader":
+                self._note_crossfader(msg.timestamp, value)
+
+    def _note_crossfader(self, t: float, value: float) -> None:
+        """Detect a transition from crossfader motion over a rolling window."""
+        history = self._cross_history
+        history.append((t, value))
+        while history and t - history[0][0] > CROSS_WINDOW:
+            history.popleft()
+        if len(history) >= 2:
+            values = [v for _, v in history]
+            if max(values) - min(values) >= CROSS_MOVE:
+                self._transition_until = max(self._transition_until, t + TRANSITION_COOLDOWN)
 
     # ------------------------------------------------------------------ clock
     def _advance_clock(self, now: float) -> None:
@@ -216,7 +251,7 @@ class Metronome(threading.Thread):
             eq_mid_b=self._midi["eq_mid_b"],
             eq_high_b=self._midi["eq_high_b"],
             energy=self._energy,
-            in_transition=self._in_transition,
+            in_transition=now < self._transition_until,
             free_running=not self._is_pdl_fresh(now),
             pdl_fresh=self._is_pdl_fresh(now),
             midi_fresh=self._is_midi_fresh(now),

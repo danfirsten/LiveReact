@@ -37,6 +37,7 @@ class PhraseEngine:
         self._last_change_bar = 0
         self._last_bar_seen = -1
         self._skip_requested = False
+        self._was_in_transition = False
         self.rotations = 0  # for tests/telemetry
 
     @property
@@ -61,9 +62,16 @@ class PhraseEngine:
 
     # --- per-frame ---
     def tick(self, snap: ShowSnapshot, rig: Rig) -> Contribution:
+        self._detect_settle(snap)
         self._maybe_rotate(snap)
         self._advance_crossfade(snap)
         return self._render(snap, rig)
+
+    def _detect_settle(self, snap: ShowSnapshot) -> None:
+        # When a mix ends, settle into a fresh look on the next downbeat (docs/08 §4).
+        if self._was_in_transition and not snap.in_transition:
+            self._skip_requested = True
+        self._was_in_transition = snap.in_transition
 
     def _maybe_rotate(self, snap: ShowSnapshot) -> None:
         # Only act on a *new* bar so a boundary fires once, not every tick.

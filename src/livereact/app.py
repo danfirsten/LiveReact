@@ -22,6 +22,7 @@ from .core.show_engine import ShowEngine
 from .core.show_state import ShowState
 from .engines.phrase import PhraseEngine
 from .engines.reactive import ReactiveLayerEngine
+from .engines.transition import TransitionEngine
 from .fixtures.rig import Rig, load_rig
 from .inputs.demo import DemoDataSource
 from .merge.merge import ManualParams
@@ -81,7 +82,9 @@ class App:
         if self.config.demo:
             self.manual.laser_enable = True
         self.phrase_engine = PhraseEngine()
-        self.engines = [ReactiveLayerEngine(), self.phrase_engine]
+        # Order matters: Reactive base, then Phrase (scene movement/laser win via
+        # last-write), then Transition (its lift max-merges over the held look).
+        self.engines = [ReactiveLayerEngine(), self.phrase_engine, TransitionEngine()]
         self.show_engine = ShowEngine(
             self.show_state, self.rig, self.frame_buffer, self.engines,
             self.manual, self.clock, self.stop_event,
