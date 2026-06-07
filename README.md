@@ -21,12 +21,11 @@ on an injected clock, with clean Ctrl-C shutdown. Phases 0–6 need **no hardwar
 ## Quick start
 
 This repo targets **Python 3.12** (the analysis pins it for prebuilt
-`python-rtmidi` wheels at the hardware-MIDI phase). The hardware-free phases also
-run on **3.13**, which is what the current dev venv uses.
+`python-rtmidi` wheels at the hardware-MIDI phase), which is what the dev venv uses.
 
 ```bash
 # Windows (PowerShell)
-py -3.13 -m venv .venv
+py -3.12 -m venv .venv
 .venv\Scripts\python -m pip install -e ".[dev]"
 .venv\Scripts\python -m livereact --demo --duration 3   # short demo run
 .venv\Scripts\python -m pytest                          # run the test suite

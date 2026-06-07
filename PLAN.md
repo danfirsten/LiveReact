@@ -13,7 +13,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 ## Phase 0 — Foundation `[x]`
 The spine: threads alive, frames flowing, writer never stops, all on an injected clock.
 
-- [x] Git repo + `pyproject.toml` (Python 3.12 target; 3.13 dev venv) + `.gitignore`
+- [x] Git repo + `pyproject.toml` (Python 3.12 venv) + `.gitignore`
 - [x] `Clock` interface, `RealClock` (hybrid sleep + spin tail), `FakeClock`
 - [x] `LoopTimer` — drift-corrected fixed-rate scheduler with stall resync
 - [x] `DmxFrameBuffer` — double-buffered publish/consume (keep-last-frame)

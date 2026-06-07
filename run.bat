@@ -4,7 +4,7 @@ setlocal
 cd /d "%~dp0"
 if not exist ".venv\Scripts\python.exe" (
     echo No virtual environment found. Create one with:
-    echo     py -3.13 -m venv .venv
+    echo     py -3.12 -m venv .venv
     echo     .venv\Scripts\python -m pip install -e ".[dev]"
     exit /b 1
 )
