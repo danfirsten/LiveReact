@@ -76,17 +76,22 @@ First "it's alive": beat-locked, frequency-colored output on the virtual rig.
       ✅ *Verified: 15 new tests; live demo shows 24 active channels; offscreen render
       confirms cyan (highs up), MH movement, lasers off.*
 
-## Phase 4 — Scene catalog + Phrase Engine `[ ]`
+## Phase 4 — Scene catalog + Phrase Engine `[x]`
 A rotating, crossfading show.
 
-- [ ] `Scene` base + ~8 of 12 starter scenes (docs/08 §3) across breakdown/build/drop/hold
-- [ ] `SceneCatalog` (round-robin within energy bucket); **lasers only in drop scenes**
-- [ ] `PhraseEngine.tick` — inferred 8/16-bar boundaries, ~2-bar crossfade, ≥4-bar
-      hold, suspend on transition/loop
-- [ ] UI: scene-override dropdown / force-scene
-- [ ] **Acceptance:** scenes rotate every 16 inferred bars with smooth crossfades;
+- [x] `Scene` base + energy buckets + 8 starter scenes (docs/08 §3) across
+      breakdown/build/drop/hold (`scenes/base.py`, `scenes/library.py`)
+- [x] `SceneCatalog` (round-robin within energy bucket, energy→bucket thresholds);
+      **only drop scenes touch laser channels**
+- [x] `PhraseEngine.tick` — bar-boundary rotation every 16 bars (fires once, not per
+      tick), ~2-bar weighted crossfade (movement/laser switch at midpoint), ≥4-bar
+      hold, suspend on transition/loop; `skip()`/`force_scene()` hooks
+- [x] Active scene name shown in the visualizer title (dropdown deferred to Phase 5 console)
+- [x] Demo arms lasers (operator-arm simulation) so drop scenes fire them on screen
+- [x] **Acceptance:** scenes rotate every 16 inferred bars with smooth crossfades;
       each scene distinct; lasers only in drops; transition/loop suspends rotation;
-      boundary fires once (unit test).
+      boundary fires once (unit test). ✅ *Verified: 13 new tests; live log shows
+      rotation; forced drop fires lasers through the full pipeline (CH1=60, 34 active).*
 
 ## Phase 5 — Operator console + manual control + safety `[ ]`
 The full UI and the "automation is default, manual is bias" model.

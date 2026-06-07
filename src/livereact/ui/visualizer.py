@@ -194,13 +194,23 @@ def build_demo_universe(rig: Rig, t: float) -> bytes:
     return render_universe([c], rig, manual)
 
 
-def run(frame_buffer: DmxFrameBuffer, rig: Rig, fps: int = 30) -> int:
-    """Open the window and refresh it from a frame buffer at ``fps`` (blocks)."""
+def run(frame_buffer: DmxFrameBuffer, rig: Rig, fps: int = 30, status=None) -> int:
+    """Open the window and refresh it from a frame buffer at ``fps`` (blocks).
+
+    ``status`` is an optional zero-arg callable returning a string (e.g. the active
+    scene name) shown in the window title.
+    """
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     win = VisualizerWindow(rig)
     win.show()
+
+    def refresh() -> None:
+        win.update_from_universe(frame_buffer.latest())
+        if status is not None:
+            win.setWindowTitle(f"LiveReact — Virtual Rig  |  Scene: {status()}")
+
     timer = QtCore.QTimer()
-    timer.timeout.connect(lambda: win.update_from_universe(frame_buffer.latest()))
+    timer.timeout.connect(refresh)
     timer.start(int(1000 / fps))
     return app.exec()
 

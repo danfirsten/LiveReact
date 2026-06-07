@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         app.install_signal_handlers()
         app.start()
         try:
-            run_visualizer(app.frame_buffer, app.rig)
+            run_visualizer(app.frame_buffer, app.rig, status=lambda: app.phrase_engine.current_scene_name)
         finally:
             app.shutdown()
     else:

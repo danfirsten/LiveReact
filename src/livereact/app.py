@@ -19,6 +19,7 @@ from .core.frame_buffer import DmxFrameBuffer
 from .core.metronome import Metronome
 from .core.show_engine import ShowEngine
 from .core.show_state import ShowState
+from .engines.phrase import PhraseEngine
 from .engines.reactive import ReactiveLayerEngine
 from .fixtures.rig import Rig, load_rig
 from .inputs.demo import DemoDataSource
@@ -67,10 +68,16 @@ class App:
         self.metronome = Metronome(self.input_queue, self.show_state, self.clock, self.stop_event)
         self.source = DemoDataSource(self.input_queue, self.clock, self.stop_event)
 
-        # --- show pipeline (Phase 3): snapshot -> engines -> merge -> frame buffer ---
+        # --- show pipeline (Phases 3-4): snapshot -> engines -> merge -> frame buffer ---
         self.rig: Rig = load_rig()
         self.manual = ManualParams()
-        self.engines = [ReactiveLayerEngine()]
+        # In demo mode, simulate the operator arming lasers before the set so drop
+        # scenes can show them. Lasers still boot off and only fire in drop scenes;
+        # real/hardware mode leaves them disarmed until the operator arms (safety).
+        if self.config.demo:
+            self.manual.laser_enable = True
+        self.phrase_engine = PhraseEngine()
+        self.engines = [ReactiveLayerEngine(), self.phrase_engine]
         self.show_engine = ShowEngine(
             self.show_state, self.rig, self.frame_buffer, self.engines,
             self.manual, self.clock, self.stop_event,
