@@ -14,6 +14,7 @@ import signal
 import threading
 from dataclasses import dataclass
 
+from . import config as app_config
 from .clock import Clock, RealClock
 from .core.frame_buffer import DmxFrameBuffer
 from .core.metronome import Metronome
@@ -36,6 +37,7 @@ class AppConfig:
     demo: bool = True
     dmx_rate_hz: float = 40.0
     duration: float | None = None  # bounded run for testing; None = run until signal
+    config_path: str | None = "config.json"  # None disables persistence
 
 
 class App:
@@ -71,6 +73,8 @@ class App:
         # --- show pipeline (Phases 3-4): snapshot -> engines -> merge -> frame buffer ---
         self.rig: Rig = load_rig()
         self.manual = ManualParams()
+        if self.config.config_path:
+            app_config.load_into(self.manual, self.config.config_path)
         # In demo mode, simulate the operator arming lasers before the set so drop
         # scenes can show them. Lasers still boot off and only fire in drop scenes;
         # real/hardware mode leaves them disarmed until the operator arms (safety).
@@ -108,6 +112,8 @@ class App:
             t.join(timeout=3.0)
             if t.is_alive():
                 log.warning("Thread %s did not stop within timeout", t.name)
+        if self.config.config_path:
+            app_config.save_from(self.manual, self.config.config_path)
         log.info("Shutdown complete (%d frames sent)", self.writer.frames_sent)
 
     def serve(self) -> None:

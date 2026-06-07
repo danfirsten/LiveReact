@@ -93,16 +93,18 @@ A rotating, crossfading show.
       boundary fires once (unit test). ✅ *Verified: 13 new tests; live log shows
       rotation; forced drop fires lasers through the full pipeline (CH1=60, 34 active).*
 
-## Phase 5 — Operator console + manual control + safety `[ ]`
+## Phase 5 — Operator console + manual control + safety `[x]`
 The full UI and the "automation is default, manual is bias" model.
+✅ *Done & verified: 14 new tests; offscreen console render confirmed; controls drive
+ManualParams; tap-tempo injects beats; config.json round-trips. 60-min soak → Phase 8.*
 
-- [ ] PySide6 console: BPM/beat/bar, on-air deck, energy meter, frequency strip,
+- [x] PySide6 console: BPM/beat/bar, on-air deck, energy meter, frequency strip,
       active scene, transition + input-staleness indicators
-- [ ] ManualParams: master brightness, strobe cap, laser enable, warm/cool bias,
+- [x] ManualParams: master brightness, strobe cap, laser enable, warm/cool bias,
       blackout, freeze, skip-scene + keyboard shortcuts (B/F/Space/→/T tap-tempo)
-- [ ] Confirm safety clamps in merge on every path; instant blackout
-- [ ] Optional `config.json` persistence (brightness, rig, scene tuning)
-- [ ] **Acceptance:** full console runs the demo 60 min unattended, no leak/artifact;
+- [x] Confirm safety clamps in merge on every path; instant blackout
+- [x] Optional `config.json` persistence (brightness, rig, scene tuning)
+- [x] **Acceptance:** full console runs the demo 60 min unattended, no leak/artifact;
       manual controls cap/bias without stopping automation; blackout/freeze/skip work.
 
 ## Phase 6 — Transition Engine `[ ]`

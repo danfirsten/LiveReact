@@ -54,6 +54,15 @@ def _to8(level01: float) -> int:
     return _clamp8(round(level01 * 255))
 
 
+def _bias_factors(bias: float) -> tuple[float, float]:
+    """(red_factor, blue_factor) for a warm/cool bias in [-1, +1].
+
+    bias < 0 = warm (boost red, cut blue); bias > 0 = cool (cut red, boost blue).
+    """
+    warmth = -bias
+    return (1.0 + 0.5 * warmth, 1.0 - 0.5 * warmth)
+
+
 # Approximate color-wheel slot -> RGB for moving heads. The SHEHDS wheel slot
 # boundaries are not documented in the manuals we have, so this is a reasonable
 # default to be corrected on hardware (assumption A1). Used only for display and
@@ -148,6 +157,8 @@ class Fixture:
     def apply_master_brightness(self, uni: bytearray, factor01: float) -> None: ...
     def cap_strobe(self, uni: bytearray, cap01: float) -> None: ...
     def apply_safety(self, uni: bytearray, laser_enabled: bool) -> None: ...
+    def apply_color_bias(self, uni: bytearray, bias: float) -> None: ...
+    def apply_strobe_burst(self, uni: bytearray, cap01: float) -> None: ...
 
     # --- visualization ---
     def visual_state(self, uni: bytes) -> VisualState:  # pragma: no cover - overridden
@@ -203,6 +214,9 @@ class MovingHead(Fixture):
     def cap_strobe(self, uni: bytearray, cap01: float) -> None:
         i = self.offset + 6  # ch7 strobe
         uni[i] = min(uni[i], _to8(cap01))
+
+    def apply_strobe_burst(self, uni: bytearray, cap01: float) -> None:
+        uni[self.offset + 6] = _to8(cap01)  # ch7 strobe at the capped rate
 
     def visual_state(self, uni: bytes) -> VisualState:
         dim = uni[self.offset + 5] / 255
@@ -284,6 +298,13 @@ class Par(Fixture):
         for i in range(self.offset, self.offset + 4):  # scale R,G,B,W together
             uni[i] = _clamp8(uni[i] * factor01)
 
+    def apply_color_bias(self, uni: bytearray, bias: float) -> None:
+        if bias == 0.0:
+            return
+        rf, bf = _bias_factors(bias)
+        uni[self.offset + 0] = _clamp8(uni[self.offset + 0] * rf)  # R
+        uni[self.offset + 2] = _clamp8(uni[self.offset + 2] * bf)  # B
+
     def visual_state(self, uni: bytes) -> VisualState:
         r, g, b, w = (uni[self.offset + k] for k in range(4))
         # Fold white into RGB for display.
@@ -326,6 +347,16 @@ class WashBar(Fixture):
     def cap_strobe(self, uni: bytearray, cap01: float) -> None:
         i = self.offset + 1  # ch2 strobe
         uni[i] = min(uni[i], _to8(cap01))
+
+    def apply_strobe_burst(self, uni: bytearray, cap01: float) -> None:
+        uni[self.offset + 1] = _to8(cap01)  # ch2 strobe at the capped rate
+
+    def apply_color_bias(self, uni: bytearray, bias: float) -> None:
+        if bias == 0.0:
+            return
+        rf, bf = _bias_factors(bias)
+        uni[self.offset + 2] = _clamp8(uni[self.offset + 2] * rf)  # R ch3
+        uni[self.offset + 4] = _clamp8(uni[self.offset + 4] * bf)  # B ch5
 
     def visual_state(self, uni: bytes) -> VisualState:
         dim = uni[self.offset + 0] / 255

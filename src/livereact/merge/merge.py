@@ -46,7 +46,8 @@ class ManualParams:
     master_brightness: float = 1.0   # 0..1 scales dimmers / par color
     strobe_cap: float = 1.0          # 0..1 max strobe-rate channel value
     laser_enable: bool = False       # lasers stay off until explicitly enabled
-    warm_cool_bias: float = 0.0      # -1 warm .. +1 cool (applied in Phase 5)
+    warm_cool_bias: float = 0.0      # -1 warm .. +1 cool
+    strobe_burst: bool = False       # momentary operator strobe (within the cap)
     blackout: bool = False           # hard: zero everything
     freeze: bool = False             # hard: hold last frame (handled by show engine)
 
@@ -83,8 +84,11 @@ def finalize(merged: bytearray, rig: Rig, manual: ManualParams) -> bytes:
     out = bytearray(merged)
     for fx in rig.fixtures:
         fx.apply_master_brightness(out, manual.master_brightness)
-        fx.cap_strobe(out, manual.strobe_cap)
-        fx.apply_safety(out, manual.laser_enable)  # laser fail-safe: off unless enabled
+        fx.apply_color_bias(out, manual.warm_cool_bias)
+        if manual.strobe_burst:
+            fx.apply_strobe_burst(out, manual.strobe_cap)  # within the cap
+        fx.cap_strobe(out, manual.strobe_cap)              # safety: always cap
+        fx.apply_safety(out, manual.laser_enable)          # laser fail-safe
     return bytes(out)
 
 

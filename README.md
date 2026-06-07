@@ -14,12 +14,13 @@ live in [`PLAN.md`](PLAN.md); deferred hardware/usage decisions live in
 
 ## Status
 
-**Phases 0–4 complete — it's a show.** End to end with no hardware: a synthetic
-musical clock → tear-free ShowState snapshots → the Reactive Layer (beat-locked
-pulses, mirrored moving heads, frequency-driven color) + the Phrase Engine (an
-8-scene catalog rotating on 16-bar boundaries with crossfades; lasers only on drops)
-→ merge/safety → the DMX writer, all visible on the PySide6 virtual rig.
-**Phase 5 (operator console + manual controls)** is next. Phases 0–6 need **no
+**Phases 0–5 complete — it's operable.** End to end with no hardware: a synthetic
+musical clock → tear-free ShowState snapshots → the Reactive Layer + the Phrase
+Engine (8-scene catalog rotating on 16-bar boundaries; lasers only on drops) →
+merge/safety → the DMX writer, all wrapped in an **operator console** with live
+readouts (BPM/beat/bar/energy/bands/scene/health) and manual bias controls
+(brightness, strobe cap, warm/cool, blackout, freeze, skip, tap-tempo) — automation
+stays the default. **Phase 6 (Transition Engine)** is next. Phases 0–6 need **no
 hardware**. See [`PLAN.md`](PLAN.md).
 
 Watch it live (the full pipeline driving the rig view):

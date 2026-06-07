@@ -31,7 +31,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     mode.add_argument("--hardware", action="store_true", help="Use real devices (Phase 7+; falls back to demo for now).")
     p.add_argument("--rate", type=float, default=40.0, dest="rate", help="DMX refresh rate in Hz (default: 40).")
     p.add_argument("--duration", type=float, default=None, help="Run for N seconds then exit (default: until Ctrl-C).")
-    p.add_argument("--visualize", action="store_true", help="Open the virtual rig visualizer (PySide6).")
+    p.add_argument("--visualize", action="store_true", help="Open the operator console + virtual rig (PySide6).")
     p.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR (default: INFO).")
     return p.parse_args(argv)
 
@@ -50,13 +50,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.visualize:
         # Qt must own the main thread: run the pipeline in the background and the
-        # visualizer here; closing the window shuts everything down.
-        from .ui.visualizer import run as run_visualizer
+        # operator console here; closing the window shuts everything down.
+        from .ui.console import run_console
 
         app.install_signal_handlers()
         app.start()
         try:
-            run_visualizer(app.frame_buffer, app.rig, status=lambda: app.phrase_engine.current_scene_name)
+            run_console(app)
         finally:
             app.shutdown()
     else:
