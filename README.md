@@ -14,11 +14,14 @@ live in [`PLAN.md`](PLAN.md); deferred hardware/usage decisions live in
 
 ## Status
 
-**Phases 0 & 2 complete.** The spine runs hardware-free (drift-corrected DMX
-writer on an injected clock, clean shutdown), and the universe is visible on screen:
-fixture profiles + rig loader + merge/safety layer + a PySide6 virtual rig
-visualizer with a DMX inspector. Phase 1 (synthetic musical clock) is next; Phases
-0–6 need **no hardware**. See [`PLAN.md`](PLAN.md).
+**Phases 0, 1 & 2 complete.** The spine runs hardware-free (drift-corrected DMX
+writer on an injected clock, clean shutdown); a synthetic musical clock produces a
+smooth interpolated beat phase, inferred bars, energy, and transitions, published as
+tear-free immutable ShowState snapshots; and the universe is visible on screen
+(fixture profiles + rig loader + merge/safety layer + PySide6 virtual rig
+visualizer with a DMX inspector). **Phase 3 (Reactive Layer)** is next — it joins
+the two halves: read a ShowState snapshot, write contributions into the merge.
+Phases 0–6 need **no hardware**. See [`PLAN.md`](PLAN.md).
 
 See the visualizer now (animated hand-set scene through the real merge pipeline):
 

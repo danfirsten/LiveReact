@@ -26,20 +26,23 @@ The spine: threads alive, frames flowing, writer never stops, all on an injected
       steady ~40 Hz frames, Ctrl-C shuts down cleanly; FakeClock test drives the
       writer deterministically. ✅ *Verified: 40 fps steady, clean shutdown, 15 tests pass.*
 
-## Phase 1 — Demo musical clock + state bus `[ ]` ← **next / deferred**
+## Phase 1 — Demo musical clock + state bus `[x]`
 Synthetic "music" producing smooth beat phase; no hardware.
-> Built Phase 2 first (its acceptance is defined against a hand-set scene buffer).
-> Phase 1 is still required before **Phase 3** wires real timing/EQ into the engines.
 
-- [ ] `ShowState` with immutable one-lock `snapshot()` (frozen dataclass) + per-field
-      provenance/confidence (measured / inferred / interpolated). (docs/04 §4.3)
-- [ ] `queue.Queue` message types (beat, bpm, midi-cc, transition)
-- [ ] `Metronome` — sole writer of clock fields; drains queue, interpolates beat
-      phase, resyncs to beats, infers bar count, free-runs on staleness
-- [ ] `DemoDataSource` (`InputSource`) — fixed BPM, advancing beat/bar, slow energy
-      curve, periodic synthetic transitions/loops
-- [ ] **Acceptance:** demo logs show smooth ~100 Hz interpolated beat phase, an
+- [x] `ShowState` as a single-slot publisher of an immutable `ShowSnapshot`
+      (atomic swap → tear-free); per-field provenance documented (measured /
+      interpolated / inferred); track-position intentionally absent. (docs/04 §4.3)
+- [x] `queue` message types: beat, status, midi-cc, transition (frozen, timestamped)
+- [x] `Metronome` — sole writer; drains queue, interpolates beat phase, re-anchors
+      to master beats, infers bar from downbeats, free-runs on staleness, derives
+      smoothed energy; periodic ShowState log line
+- [x] `DemoDataSource` (`InputSource`) — steady BPM, advancing beat/bar, slow energy
+      curve via fader/EQ MIDI, periodic transitions (crossfader sweep + deck handoff) and loops
+- [x] Wired into `App` (source → queue → metronome → ShowState) alongside the writer
+- [x] **Acceptance:** demo logs show smooth ~100 Hz interpolated beat phase, an
       advancing bar counter, periodic transitions; snapshots tear-free under stress.
+      ✅ *Verified: live log shows locked clock + advancing bars; 12 new tests incl. a
+      4-reader tear-free stress test; transitions/handoff covered.*
 
 ## Phase 2 — Fixtures, rig, merge, virtual visualizer `[x]`
 *See* the universe on screen.

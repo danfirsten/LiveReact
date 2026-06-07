@@ -9,12 +9,16 @@ the same supervisor without changing its shutdown contract.
 from __future__ import annotations
 
 import logging
+import queue
 import signal
 import threading
 from dataclasses import dataclass
 
 from .clock import Clock, RealClock
 from .core.frame_buffer import DmxFrameBuffer
+from .core.metronome import Metronome
+from .core.show_state import ShowState
+from .inputs.demo import DemoDataSource
 from .output.base import OutputBackend
 from .output.null_log import NullLogBackend
 from .output.writer import DmxWriter
@@ -42,7 +46,7 @@ class App:
         self.clock = clock or RealClock()
         self.stop_event = threading.Event()
 
-        # --- core pipeline (Phase 0) ---
+        # --- output pipeline (Phase 0) ---
         self.frame_buffer = DmxFrameBuffer()
         self.backend = backend or NullLogBackend(log_every=int(self.config.dmx_rate_hz))
         self.writer = DmxWriter(
@@ -53,8 +57,15 @@ class App:
             hz=self.config.dmx_rate_hz,
         )
 
-        # All hardware-touching, non-daemon threads to join on shutdown.
-        self._threads: list[threading.Thread] = [self.writer]
+        # --- input pipeline (Phase 1): source -> queue -> metronome -> ShowState ---
+        self.input_queue: "queue.Queue" = queue.Queue()
+        self.show_state = ShowState()
+        self.metronome = Metronome(self.input_queue, self.show_state, self.clock, self.stop_event)
+        self.source = DemoDataSource(self.input_queue, self.clock, self.stop_event)
+
+        # All non-daemon threads to join on shutdown. Order: producers first so the
+        # metronome drains a quiescent queue last; the writer is independent.
+        self._threads: list[threading.Thread] = [self.source, self.metronome, self.writer]
 
     def start(self) -> None:
         log.info(
