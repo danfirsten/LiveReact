@@ -14,15 +14,22 @@ live in [`PLAN.md`](PLAN.md); deferred hardware/usage decisions live in
 
 ## Status
 
-**Phases 0–6 complete — the whole no-hardware show is built.** End to end with no
-hardware: a synthetic musical clock → tear-free ShowState snapshots → the Reactive
-Layer + the Phrase Engine (8-scene catalog rotating on 16-bar boundaries; lasers
-only on drops) + the Transition Engine (detects DJ mixes from crossfader motion,
-holds + lifts during the mix, settles into a new look after) → merge/safety → the
-DMX writer, all wrapped in an **operator console** with live readouts and manual
-bias controls — automation stays the default. **Phase 7 (real hardware)** is the
-only remaining step that needs the physical rig; Phase 8 is tuning + packaging. See
-[`PLAN.md`](PLAN.md).
+**Phases 0–6 complete; Phase 7 hardware layer built ("ready but untested").** The
+full show runs hardware-free (synthetic clock → ShowState → Reactive + Phrase +
+Transition engines → merge/safety → DMX writer, in an operator console). The
+hardware adapters — Enttec serial output, Pro DJ Link + read-only MIDI input, the
+fixture-test panel, MIDI-learn, and network diagnostics — are written behind the
+existing interfaces and unit-tested for everything that doesn't need a device;
+`--hardware` degrades gracefully when none are present. The real serial/MIDI/PDL
+paths await the physical rig — see [`HARDWARE.md`](HARDWARE.md). **Phase 8 (tuning,
+endurance, packaging)** is the last step. See [`PLAN.md`](PLAN.md).
+
+```bash
+python -m livereact --hardware --visualize   # real devices (auto-detect, graceful fallback)
+python -m livereact --fixture-test           # drive raw DMX channels for bring-up
+python -m livereact --midi-monitor           # discover the XDJ's MIDI CCs
+python -m livereact --net-check              # Pro DJ Link network readiness
+```
 
 Watch it live (the full pipeline driving the rig view):
 

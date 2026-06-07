@@ -117,17 +117,24 @@ Clean DJ-mix handling, built against synthetic transitions first.
       rotation during transition; settles cleanly; ≥4-bar hold; deterministic FakeClock tests.
       ✅ *Verified: 99 tests; live demo detects transition=Y from the crossfader and settles into a new scene right after.*
 
-## Phase 7 — Hardware integration `[ ]` *(requires rig — only hardware-gated phase)*
-Swap demo adapters for real ones; no engine/scene changes.
+## Phase 7 — Hardware integration `[~]` *(built "ready but UNTESTED"; acceptance awaits the rig)*
+Real adapters written behind the existing interfaces; hardware mode degrades
+gracefully when no devices are present. See [`HARDWARE.md`](HARDWARE.md) for bring-up.
 
-- [ ] Install/verify on **Python 3.12** (for `python-rtmidi` wheels)
-- [ ] `EnttecSerialBackend` — FTDI VID/PID detect, macOS `cu.*`, 518-byte frames @ 40 Hz, self-healing
-- [ ] Manual fixture-test panel (drive individual channels; verify all 8 fixtures)
-- [ ] `ProDjLinkListener` (explicit interface override, netifaces swap) + `MidiListener`
-- [ ] MIDI-learn tool (remap XDJ empirically; persist map)
-- [ ] Network setup: static `169.254.x.y/16`, firewall rule, "no DJ-Link seen" diagnostic
-- [ ] **Acceptance:** each fixture responds to manual writes; lights pulse on real XDJ
-      beats; crossfader updates UI live; full scene rotation works on the macOS show machine.
+- [x] Hardware deps install on **Python 3.12** (`pyserial`, `mido`, `python-rtmidi`)
+- [x] `EnttecSerialBackend` (`output/enttec.py`) — FTDI VID/PID detect, macOS `cu.*`,
+      518-byte frames, self-healing via the writer. *(frame + port select unit-tested)*
+- [x] Manual fixture-test panel (`ui/fixture_test.py`) — per-channel sliders + flash,
+      `--fixture-test`
+- [x] `ProDjLinkListener` (`inputs/prodj.py`, explicit interface override, "no DJ-Link
+      seen" diagnostic) + `MidiListener` (`inputs/midi.py`, read-only). *(lazy-imported)*
+- [x] MIDI-learn via `--midi-monitor`; CC map persists to `midi_map.json` (`inputs/midi_map.py`)
+- [x] Network helper + `--net-check` (static `169.254.x.y/16` guidance, firewall ports)
+- [x] `--hardware` wires real backend + inputs with graceful fallback (verified: no
+      devices → null backend, inputs skipped, clean run/shutdown)
+- [ ] **Acceptance (NEEDS HARDWARE):** each fixture responds to manual writes; lights
+      pulse on real XDJ beats; crossfader updates UI live; full scene rotation on the
+      macOS show machine. ⏳ *Awaiting the rig; everything testable without it is unit-tested.*
 
 ## Phase 8 — Tuning, endurance, packaging `[ ]`
 Make it good and shippable.

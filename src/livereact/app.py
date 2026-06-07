@@ -9,6 +9,7 @@ the same supervisor without changing its shutdown contract.
 from __future__ import annotations
 
 import logging
+import os
 import queue
 import signal
 import threading
@@ -39,6 +40,8 @@ class AppConfig:
     dmx_rate_hz: float = 40.0
     duration: float | None = None  # bounded run for testing; None = run until signal
     config_path: str | None = "config.json"  # None disables persistence
+    midi_map_path: str = "midi_map.json"      # discovered XDJ CC map (hardware mode)
+    pdl_interface: str | None = None          # explicit NIC for Pro DJ Link
 
 
 class App:
@@ -54,9 +57,9 @@ class App:
         self.clock = clock or RealClock()
         self.stop_event = threading.Event()
 
-        # --- output pipeline (Phase 0) ---
+        # --- output pipeline (Phase 0; real Enttec in hardware mode) ---
         self.frame_buffer = DmxFrameBuffer()
-        self.backend = backend or NullLogBackend(log_every=int(self.config.dmx_rate_hz))
+        self.backend = backend or self._build_backend()
         self.writer = DmxWriter(
             self.frame_buffer,
             self.backend,
@@ -65,11 +68,11 @@ class App:
             hz=self.config.dmx_rate_hz,
         )
 
-        # --- input pipeline (Phase 1): source -> queue -> metronome -> ShowState ---
+        # --- input pipeline (Phase 1; real PDL+MIDI in hardware mode) ---
         self.input_queue: "queue.Queue" = queue.Queue()
         self.show_state = ShowState()
         self.metronome = Metronome(self.input_queue, self.show_state, self.clock, self.stop_event)
-        self.source = DemoDataSource(self.input_queue, self.clock, self.stop_event)
+        self.sources = self._build_sources()
 
         # --- show pipeline (Phases 3-4): snapshot -> engines -> merge -> frame buffer ---
         self.rig: Rig = load_rig()
@@ -90,12 +93,52 @@ class App:
             self.manual, self.clock, self.stop_event,
         )
 
-        # All non-daemon threads to join on shutdown. Order: producers first so the
-        # metronome drains a quiescent queue last; the writer is independent.
-        self._threads: list[threading.Thread] = [
-            self.source, self.metronome, self.show_engine, self.writer,
+        # Core engine threads (always present). Input sources are managed separately
+        # since some (e.g. MIDI) aren't threads themselves.
+        self._core_threads: list[threading.Thread] = [
+            self.metronome, self.show_engine, self.writer,
         ]
 
+    # ------------------------------------------------------------------ wiring
+    def _build_backend(self) -> OutputBackend:
+        """NullLog in demo; the Enttec in hardware mode, falling back to NullLog
+        (with a warning) if no device is present so the app still runs."""
+        if self.config.demo:
+            return NullLogBackend(log_every=int(self.config.dmx_rate_hz))
+        try:
+            from serial.tools import list_ports
+
+            from .output.enttec import EnttecSerialBackend, select_enttec_port
+
+            if select_enttec_port(list_ports.comports()):
+                return EnttecSerialBackend()
+            log.warning("Hardware mode: no Enttec detected; output will be logged only.")
+        except Exception:  # noqa: BLE001
+            log.exception("Hardware mode: Enttec backend unavailable — logging output only.")
+        return NullLogBackend(log_every=int(self.config.dmx_rate_hz))
+
+    def _build_sources(self) -> list:
+        """DemoDataSource in demo; real PDL + MIDI listeners in hardware mode."""
+        if self.config.demo:
+            return [DemoDataSource(self.input_queue, self.clock, self.stop_event)]
+
+        from .inputs.midi import MidiListener
+        from .inputs.midi_map import CcMap
+        from .inputs.prodj import ProDjLinkListener
+
+        cc_map = CcMap()
+        if self.config.midi_map_path and os.path.exists(self.config.midi_map_path):
+            try:
+                cc_map = CcMap.load(self.config.midi_map_path)
+            except Exception:  # noqa: BLE001
+                log.warning("Could not load MIDI map %s; using defaults", self.config.midi_map_path)
+        return [
+            ProDjLinkListener(self.input_queue, self.clock, self.stop_event,
+                              interface=self.config.pdl_interface),
+            MidiListener(self.input_queue, self.clock, cc_map),
+        ]
+
+    # ------------------------------------------------------------------ lifecycle
     def start(self) -> None:
         log.info(
             "Starting LiveReact (mode=%s, dmx=%.0f Hz, backend=%s)",
@@ -103,15 +146,26 @@ class App:
             self.config.dmx_rate_hz,
             self.backend.name,
         )
-        for t in self._threads:
+        for t in self._core_threads:
             t.start()
+        for source in self.sources:
+            try:
+                source.start()
+            except Exception:  # noqa: BLE001 - a failed input must not abort startup
+                log.exception("Input source %r failed to start; continuing without it", source.name)
 
     def shutdown(self) -> None:
         if self.stop_event.is_set():
             return
         log.info("Shutting down...")
         self.stop_event.set()
-        for t in self._threads:
+        for source in self.sources:
+            try:
+                source.stop()
+            except Exception:  # noqa: BLE001
+                log.exception("Error stopping source %r", source.name)
+        threads = self._core_threads + [s for s in self.sources if isinstance(s, threading.Thread)]
+        for t in threads:
             t.join(timeout=3.0)
             if t.is_alive():
                 log.warning("Thread %s did not stop within timeout", t.name)
