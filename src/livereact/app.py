@@ -42,6 +42,8 @@ class AppConfig:
     config_path: str | None = "config.json"  # None disables persistence
     midi_map_path: str = "midi_map.json"      # discovered XDJ CC map (hardware mode)
     pdl_interface: str | None = None          # explicit NIC for Pro DJ Link
+    record: bool = False                      # record this session for analysis
+    session_dir: str | None = None            # where to record (set by the CLI)
 
 
 class App:
@@ -98,6 +100,26 @@ class App:
         self._core_threads: list[threading.Thread] = [
             self.metronome, self.show_engine, self.writer,
         ]
+
+        # --- optional session recording (for hardware testing / feedback) ---
+        self.recorder = None
+        if self.config.record and self.config.session_dir:
+            self._setup_recording(self.config.session_dir)
+
+    def _setup_recording(self, session_dir: str) -> None:
+        from .recorder import SessionRecorder, write_meta, write_notes_template
+
+        write_notes_template(session_dir)
+        write_meta(session_dir, {
+            "mode": "demo" if self.config.demo else "hardware",
+            "dmx_rate_hz": self.config.dmx_rate_hz,
+            "pdl_interface": self.config.pdl_interface,
+        })
+        self.recorder = SessionRecorder(
+            self.show_state, self.frame_buffer, self.clock, self.stop_event, session_dir,
+        )
+        self._core_threads.append(self.recorder)
+        log.info("Recording session to %s", session_dir)
 
     # ------------------------------------------------------------------ wiring
     def _build_backend(self) -> OutputBackend:
@@ -171,6 +193,13 @@ class App:
                 log.warning("Thread %s did not stop within timeout", t.name)
         if self.config.config_path:
             app_config.save_from(self.manual, self.config.config_path)
+        if self.recorder is not None and self.config.session_dir:
+            from .recorder import write_summary
+
+            write_summary(self.config.session_dir, {
+                "frames_sent": self.writer.frames_sent,
+                "state_samples": self.recorder.samples,
+            })
         log.info("Shutdown complete (%d frames sent)", self.writer.frames_sent)
 
     def serve(self) -> None:

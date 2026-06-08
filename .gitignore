@@ -19,6 +19,9 @@ env/
 # Local runtime artifacts
 *.log
 config.json
+midi_map.json
+recordings/
+diagnostics/
 
 # OS / editor
 .DS_Store

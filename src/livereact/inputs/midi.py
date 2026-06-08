@@ -78,8 +78,8 @@ class MidiListener(InputSource):
                 self._port = None
 
 
-def monitor(port_match: str = "XDJ", duration: float | None = None) -> None:
-    """Print incoming MIDI to help remap the XDJ empirically (the MIDI-learn tool).
+def monitor(port_match: str = "XDJ", duration: float | None = None, out_path: str | None = None) -> None:
+    """Print (and optionally record) incoming MIDI to remap the XDJ empirically.
 
     Move each control on the XDJ and note the channel/CC it reports, then put those
     into midi_map.json (or update DEFAULT_CC_MAP). Blocks until Ctrl-C / duration.
@@ -88,22 +88,34 @@ def monitor(port_match: str = "XDJ", duration: float | None = None) -> None:
 
     import mido
 
-    names = mido.get_input_names()
-    print("MIDI input ports:", names or "(none)")
-    chosen = find_midi_port(names, port_match)
-    if not chosen:
-        print("No MIDI input found. Connect the XDJ-XZ and enable MIDI in Utility -> MIDI.")
-        return
-    print(f"Monitoring {chosen!r}. Move controls on the XDJ; Ctrl-C to stop.\n")
-    deadline = None if duration is None else time.monotonic() + duration
-    with mido.open_input(chosen) as port:
-        try:
-            while deadline is None or time.monotonic() < deadline:
-                for msg in port.iter_pending():
-                    if msg.type == "control_change":
-                        print(f"  control_change  channel={msg.channel:<2} cc={msg.control:<3} value={msg.value}")
-                    else:
-                        print(f"  {msg.type}  {msg}")
-                time.sleep(0.01)
-        except KeyboardInterrupt:
-            print("\nStopped.")
+    out_fh = open(out_path, "w", encoding="utf-8") if out_path else None
+
+    def emit(line: str) -> None:
+        print(line)
+        if out_fh is not None:
+            out_fh.write(line + "\n")
+            out_fh.flush()
+
+    try:
+        names = mido.get_input_names()
+        emit(f"MIDI input ports: {names or '(none)'}")
+        chosen = find_midi_port(names, port_match)
+        if not chosen:
+            emit("No MIDI input found. Connect the XDJ-XZ and enable MIDI in Utility -> MIDI.")
+            return
+        emit(f"Monitoring {chosen!r}. Move controls on the XDJ; Ctrl-C to stop.\n")
+        deadline = None if duration is None else time.monotonic() + duration
+        with mido.open_input(chosen) as port:
+            try:
+                while deadline is None or time.monotonic() < deadline:
+                    for msg in port.iter_pending():
+                        if msg.type == "control_change":
+                            emit(f"  control_change  channel={msg.channel:<2} cc={msg.control:<3} value={msg.value}")
+                        else:
+                            emit(f"  {msg.type}  {msg}")
+                    time.sleep(0.01)
+            except KeyboardInterrupt:
+                emit("\nStopped.")
+    finally:
+        if out_fh is not None:
+            out_fh.close()

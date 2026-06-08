@@ -29,7 +29,12 @@ python -m livereact --hardware --visualize   # real devices (auto-detect, gracef
 python -m livereact --fixture-test           # drive raw DMX channels for bring-up
 python -m livereact --midi-monitor           # discover the XDJ's MIDI CCs
 python -m livereact --net-check              # Pro DJ Link network readiness
+python -m livereact --doctor                 # environment + detected-devices report
 ```
+
+**Testing on hardware?** Follow [`TESTING.md`](TESTING.md) — the exact test
+procedure plus a recording system (`--record`, `--doctor`) that captures logs,
+state, and your notes into a session folder you can hand back for analysis.
 
 Watch it live (the full pipeline driving the rig view):
 
