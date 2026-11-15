@@ -1,3 +1,5 @@
+![LiveReact: stage lights that follow the DJ's beat on their own. Pip bounces on the beat under eight beams.](docs/assets/banner.png)
+
 # LiveReact
 
 A beat-reactive DMX stage-lighting controller for live DJ sets. It reads musical
